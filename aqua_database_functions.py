@@ -119,30 +119,31 @@ def order_details(order_id, food_item, quantity):
 		print ("Transaction failed! You are trying to remove more items from inventory than exist.")
 		return
 	try:  # Catch failed commands
-		update = db.prepare("update inventory set quantity=(quantity+$2) where food_item=$1;")
+		update = db.prepare("update inventory set quantity=(quantity-$2) where food_item=$1;")
 		update(att[0],att[1])
 	except:
 		print ("Transaction failed! Rolling back. Item may not be in inventory.")
 
 	return
 
+
 def place_order(order_id, cust_id, amount, delivery_status, order_date, delivery_date, notes, items):
 	x.start()  # Start transaction
 	att = [order_id, cust_id, amount, delivery_status, order_date, delivery_date, notes]  # Create list of values for ease of use
 	att = [str(i) for i in att]  # Make sure all elements in list are string
 	for i in [4,5]: att[i] = date(int(att[i].split("/")[2]),int(att[i].split("/")[0]),int(att[i].split("/")[1]))  # Disgusting date format fix
-	try:  # Catch failed commands
-		# Insert into order
-		order = db.prepare("""insert into "order" (order_id, cust_id, amount, delivery_status, date, delivery_date, notes) VALUES ($1,$2,cast($3 as numeric),$4,$5,$6,$7);""")
-		order(att[0],att[1],att[2],att[3],att[4],att[5],att[6])
-		# Insert into order_details
-		for i in items:
-			order_details(order_id,i[0],i[1])
+	#try:  # Catch failed commands
+	# Insert into order
+	order = db.prepare("""insert into "order" (order_id, cust_id, amount, delivery_status, date, delivery_date, notes) VALUES ($1,$2,cast($3 as numeric),$4,$5,$6,$7);""")
+	order(att[0],att[1],att[2],att[3],att[4],att[5],att[6])
+	# Insert into order_details
+	for i in items:
+		order_details(order_id,i[0],i[1])
 
-		x.commit()  # Commit successfull transaction
-	except:
+	x.commit()  # Commit successfull transaction
+	"""except:
 		print ("Transaction failed! Rolling back. Item may not be in inventory or order may already exist. Hint: use format [[foo,bar],[foo,bar]] for order details")
-		x.rollback()  # Rollback after failure
+		x.rollback()  # Rollback after failure"""
 	return
 
 
@@ -167,3 +168,4 @@ def delivery_sequence():
 	return
 
 print_orders()
+delivery_sequence()
