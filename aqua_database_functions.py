@@ -145,7 +145,22 @@ def place_order(order_id, cust_id, amount, delivery_status, order_date, delivery
 	return
 
 
-"""def delivery_sequence():"""
-
-
-place_order('324898168', '034623913', '35.00', "0", '03/15/2015', '03/16/2015', "NULL", [['apple', '5'],['pear', '2']])
+def delivery_sequence():
+	# Calculate variables
+	date = '03/16/2015' #datetime.datetime.fromtimestamp(time.time()).strftime("%m/%d/%Y")
+	sql = """select distinct seq, c.fname, c.lname, a.street, a.city, a.state, a.zip_code from (SELECT seq, id1, id2, round(cost::numeric, 2) AS cost FROM pgr_tsp($$select cast(cust_id as integer) as id, cast(ST_X(geom) as integer) as x, cast(ST_Y(geom) as integer) as y from (select distinct a.cust_id, a.geom from "order" o join address a on o.cust_id = a.cust_id where delivery_date='"""+date+"""' union select cust_id, geom from address where cust_id='000000000') as foo$$,cast('000000000' as integer))) as foo join address a on to_char(foo.id2,'fm000000000')=a.cust_id join customer c on c.cust_id=a.cust_id;"""
+	
+	# Export route to csv
+	out_path = "/home/babykitty/Route_" + datetime.datetime.fromtimestamp(time.time()).strftime("%Y-%m-%d") + ".csv"  # Set output path, date is added so that multiple order fulfillments may be placed in same directory.
+	if os.path.isfile(out_path):
+		print (out_path, "already exists, aborting. If you would like to make a new Route CSV, move or delete the pre-existing CSV for today's date.")
+		return
+	fout = open(out_path,"a")  # Set ouput csv file
+	for row in db.prepare(sql):
+		for column in row:
+			item = str(column) + ","
+			fout.write(item)
+		fout.write("\n")
+	print ("Orders exported to", out_path)
+	fout.close()
+	return
